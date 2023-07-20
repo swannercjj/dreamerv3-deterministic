@@ -1,5 +1,7 @@
 # Mastering Diverse Domains through World Models
 
+**Notice: Forked to provide compatibility with gym==0.26.2 and gymnasium API's needed for use with the latest AnimalAI**
+
 A reimplementation of [DreamerV3][paper], a scalable and general reinforcement
 learning algorithm that masters a wide range of applications with fixed
 hyperparameters.
@@ -53,6 +55,8 @@ increases data efficiency.
 If you just want to run DreamerV3 on a custom environment, you can `pip install
 dreamerv3` and copy [`example.py`][example] from this repository as a starting
 point.
+
+**Note: Install jax with GPU support first and separately if you want GPU support.**
 
 ## Docker
 

@@ -1,4 +1,5 @@
 .pytest_cache
+.venv
 dist
 __pycache__/
 *.py[cod]
