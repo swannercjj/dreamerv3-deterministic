@@ -2,6 +2,8 @@
 
 **Notice: Forked to provide compatibility with gym==0.26.2 and gymnasium API's needed for use with the latest AnimalAI**
 
+**Notice: There will be an example repo posted soon on combining AnimalAI and DreamerV3.**
+
 A reimplementation of [DreamerV3][paper], a scalable and general reinforcement
 learning algorithm that masters a wide range of applications with fixed
 hyperparameters.
