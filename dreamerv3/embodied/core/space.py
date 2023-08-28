@@ -3,7 +3,7 @@ import numpy as np
 
 class Space:
 
-  def __init__(self, dtype, shape=(), low=None, high=None):
+  def __init__(self, dtype, shape=(), low=None, high=None, seed=None):
     # For integer types, high is the excluside upper bound.
     shape = (shape,) if isinstance(shape, int) else shape
     self._dtype = np.dtype(dtype)
@@ -14,7 +14,7 @@ class Space:
     self._shape = self._infer_shape(dtype, shape, low, high)
     self._discrete = (
         np.issubdtype(self.dtype, np.integer) or self.dtype == bool)
-    self._random = np.random.RandomState()
+    self._random = np.random.RandomState(seed)
 
   @property
   def dtype(self):

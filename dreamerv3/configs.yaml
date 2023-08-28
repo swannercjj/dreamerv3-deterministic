@@ -26,8 +26,8 @@ defaults:
     script: train
     steps: 1e10
     expl_until: 0
-    log_every: 300
-    save_every: 900
+    log_every: 100 # steps
+    save_every: 900 # seconds
     eval_every: 1e6
     eval_initial: True
     eval_eps: 1
@@ -60,7 +60,7 @@ defaults:
   expl_behavior: None
   batch_size: 16
   batch_length: 64
-  data_loaders: 8
+  data_loaders: 1 # 0 or 1, if set to 0 see note in jaxagent.py
 
   # World Model
   grad_heads: [decoder, reward, cont]

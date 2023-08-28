@@ -181,17 +181,18 @@ def make_env(config, **overrides):
 
 
 def wrap_env(env, config):
+  seed = config.seed
   args = config.wrapper
   for name, space in env.act_space.items():
     if name == 'reset':
       continue
     elif space.discrete:
-      env = wrappers.OneHotAction(env, name)
+      env = wrappers.OneHotAction(env, name, seed=seed)
     elif args.discretize:
-      env = wrappers.DiscretizeAction(env, name, args.discretize)
+      env = wrappers.DiscretizeAction(env, name, args.discretize, seed)
     else:
-      env = wrappers.NormalizeAction(env, name)
-  env = wrappers.ExpandScalars(env)
+      env = wrappers.NormalizeAction(env, name, seed)
+  env = wrappers.ExpandScalars(env, seed)
   if args.length:
     env = wrappers.TimeLimit(env, args.length, args.reset)
   if args.checks:

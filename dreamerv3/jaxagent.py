@@ -31,6 +31,7 @@ class JAXAgent(embodied.Agent):
     self._setup()
     self.agent = agent_cls(obs_space, act_space, step, config, name='agent')
     self.rng = np.random.default_rng(config.seed)
+    self._seed = config.seed
 
     available = jax.devices(self.config.platform)
     self.policy_devices = [available[i] for i in self.config.policy_devices]
@@ -85,8 +86,8 @@ class JAXAgent(embodied.Agent):
     return outs, state, mets
 
   def report(self, data):
-    rng = self._next_rngs(self.train_devices)
-    mets, _ = self._report(self.varibs, rng, data)
+    # rng = self._next_rngs(self.train_devices)
+    mets, _ = self._report(self.varibs, self._seed, data)
     mets = self._convert_mets(mets, self.train_devices)
     return mets
 
@@ -146,7 +147,7 @@ class JAXAgent(embodied.Agent):
     jax.config.update('jax_platform_name', self.config.platform)
     jax.config.update('jax_disable_jit', not self.config.jit)
     jax.config.update('jax_debug_nans', self.config.debug_nans)
-    jax.config.update('jax_transfer_guard', 'disallow')
+    jax.config.update('jax_transfer_guard', 'allow') # need 'allow' for when data_loaders=0, otherwise 'disallow' works
     if self.config.platform == 'cpu':
       jax.config.update('jax_disable_most_optimizations', self.config.debug)
     jaxutils.COMPUTE_DTYPE = getattr(jnp, self.config.precision)

@@ -70,19 +70,20 @@ class ClipAction(base.Wrapper):
 
 class NormalizeAction(base.Wrapper):
 
-  def __init__(self, env, key='action'):
+  def __init__(self, env, key='action', seed=None):
     super().__init__(env)
     self._key = key
     self._space = env.act_space[key]
     self._mask = np.isfinite(self._space.low) & np.isfinite(self._space.high)
     self._low = np.where(self._mask, self._space.low, -1)
     self._high = np.where(self._mask, self._space.high, 1)
+    self._seed = seed
 
   @functools.cached_property
   def act_space(self):
     low = np.where(self._mask, -np.ones_like(self._low), self._low)
     high = np.where(self._mask, np.ones_like(self._low), self._high)
-    space = spacelib.Space(np.float32, self._space.shape, low, high)
+    space = spacelib.Space(np.float32, self._space.shape, low, high, self._seed)
     return {**self.env.act_space, self._key: space}
 
   def step(self, action):
@@ -93,15 +94,16 @@ class NormalizeAction(base.Wrapper):
 
 class OneHotAction(base.Wrapper):
 
-  def __init__(self, env, key='action'):
+  def __init__(self, env, key='action', seed=None):
     super().__init__(env)
     self._count = int(env.act_space[key].high)
     self._key = key
+    self._seed = seed
 
   @functools.cached_property
   def act_space(self):
     shape = (self._count,)
-    space = spacelib.Space(np.float32, shape, 0, 1)
+    space = spacelib.Space(np.float32, shape, 0, 1, self._seed)
     space.sample = functools.partial(self._sample_action, self._count)
     space._discrete = True
     return {**self.env.act_space, self._key: space}
@@ -124,20 +126,20 @@ class OneHotAction(base.Wrapper):
 
 class ExpandScalars(base.Wrapper):
 
-  def __init__(self, env):
+  def __init__(self, env, seed):
     super().__init__(env)
     self._obs_expanded = []
     self._obs_space = {}
     for key, space in self.env.obs_space.items():
       if space.shape == () and key != 'reward' and not space.discrete:
-        space = spacelib.Space(space.dtype, (1,), space.low, space.high)
+        space = spacelib.Space(space.dtype, (1,), space.low, space.high, seed)
         self._obs_expanded.append(key)
       self._obs_space[key] = space
     self._act_expanded = []
     self._act_space = {}
     for key, space in self.env.act_space.items():
       if space.shape == () and not space.discrete:
-        space = spacelib.Space(space.dtype, (1,), space.low, space.high)
+        space = spacelib.Space(space.dtype, (1,), space.low, space.high, seed)
         self._act_expanded.append(key)
       self._act_space[key] = space
 
@@ -243,16 +245,17 @@ class CheckSpaces(base.Wrapper):
 
 class DiscretizeAction(base.Wrapper):
 
-  def __init__(self, env, key='action', bins=5):
+  def __init__(self, env, key='action', bins=5, seed=None):
     super().__init__(env)
     self._dims = np.squeeze(env.act_space[key].shape, 0).item()
     self._values = np.linspace(-1, 1, bins)
     self._key = key
+    self._seed = seed
 
   @functools.cached_property
   def act_space(self):
     shape = (self._dims, len(self._values))
-    space = spacelib.Space(np.float32, shape, 0, 1)
+    space = spacelib.Space(np.float32, shape, 0, 1, self._seed)
     space.sample = functools.partial(
         self._sample_action, self._dims, self._values)
     space._discrete = True
