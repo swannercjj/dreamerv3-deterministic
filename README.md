@@ -1,5 +1,7 @@
 # Mastering Diverse Domains through World Models
 
+**Notice: Forked and modified to be able to create reproducible runs on various environments**
+
 A reimplementation of [DreamerV3][paper], a scalable and general reinforcement
 learning algorithm that masters a wide range of applications with fixed
 hyperparameters.
