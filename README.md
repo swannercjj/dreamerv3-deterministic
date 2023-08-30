@@ -1,6 +1,11 @@
 # Mastering Diverse Domains through World Models
 
-**Notice: Forked and modified to be able to create reproducible runs on various environments**
+**Notice: Forked and modified to be able to create reproducible runs on various environments. Changes include the following:**
+- Gym environments are seeded
+- When to log depends on steps (`embodied.when.Every`) instead of time (`embodied.when.Clock`)
+- Removed use of random number generator from `JAXAgent.report()`
+- `data_loaders` is either 0 or 1 to prevent threading
+- Seeded the rng in `Space` objects
 
 A reimplementation of [DreamerV3][paper], a scalable and general reinforcement
 learning algorithm that masters a wide range of applications with fixed
