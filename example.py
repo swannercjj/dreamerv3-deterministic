@@ -36,6 +36,14 @@ def main():
   from dreamerv3.embodied.envs import from_gym
   env = "Pendulum-v0"  # Replace this with your Gym env.
   env = from_gym.FromGym(env, obs_key='vector', seed=0)  # Or obs_key='vector'.
+  
+#   from gymnasium.wrappers.compatibility import EnvCompatibility
+#   from gym.wrappers.compatibility import EnvCompatibility
+#   from dreamerv3.embodied.envs import from_gym
+#   env = crafter.Env()  # Replace this with your Gym env.
+#   env = EnvCompatibility(env, render_mode='rgb_array') # Apply EnvCompatibility wrapper because crafter is still at gym==0.19.0 API
+#   env = from_gym.FromGym(env, obs_key='image')  # Or obs_key='vector'.
+
   env = dreamerv3.wrap_env(env, config)
   env = embodied.BatchEnv([env], parallel=False)
 
@@ -44,7 +52,7 @@ def main():
       config.batch_length, config.replay_size, logdir / 'replay')
   args = embodied.Config(
       **config.run, logdir=config.logdir,
-      batch_steps=config.batch_size * config.batch_length)
+      batch_steps=config.batch_size * config.batch_length) # type: ignore
   embodied.run.train(agent, env, replay, logger, args)
   # embodied.run.eval_only(agent, env, logger, args)
 

@@ -7,6 +7,10 @@
 - `data_loaders` is either 0 or 1 to prevent threading
 - Seeded the rng in `Space` objects
 
+**Notice: Forked to provide compatibility with gym==0.26.2 and gymnasium API's needed for use with the latest AnimalAI**
+Source [dreamerv3-compat] (https://github.com/Kinds-of-Intelligence-CFI/dreamerv3-compat)
+
+
 A reimplementation of [DreamerV3][paper], a scalable and general reinforcement
 learning algorithm that masters a wide range of applications with fixed
 hyperparameters.
@@ -60,6 +64,8 @@ increases data efficiency.
 If you just want to run DreamerV3 on a custom environment, you can `pip install
 dreamerv3` and copy [`example.py`][example] from this repository as a starting
 point.
+
+**Note: Install jax with GPU support first and separately if you want GPU support.**
 
 ## Docker
 
