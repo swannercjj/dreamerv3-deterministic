@@ -27,7 +27,7 @@ class FromGym(embodied.Env, Generic[U, V]):
   def __init__(self, env: Union[str, gym.Env[U, V]], obs_key='image', act_key='action', seed=None, **kwargs):
     if isinstance(env, str):
       self._env: gym.Env[U, V] = gym.make(env, render_mode="rgb_array", **kwargs)
-      self._env.reset(seed)
+      self._env.reset(seed=seed)
     else:
       assert not kwargs, kwargs
       assert env.render_mode == "rgb_array", f"render_mode must be rgb_array, got {env.render_mode}"
