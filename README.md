@@ -2,12 +2,12 @@
 
 **Notice: Forked and modified to be able to create reproducible runs on various environments. Changes include the following:**
 - Gym environments are seeded observed in `from_gym.py`
-- When to log depends on steps (`embodied.when.Every`) instead of time (`embodied.when.Clock`)
 - Removed use of random number generator from `JAXAgent.report()`
 - `data_loaders` is either 0 or 1 to prevent threading
 - Seeded the rng in `Space` objects
 
 **Notice: Forked to provide compatibility with gym==0.26.2 and gymnasium API's needed for use with the latest AnimalAI**
+
 Source [dreamerv3-compat] (https://github.com/Kinds-of-Intelligence-CFI/dreamerv3-compat)
 
 
