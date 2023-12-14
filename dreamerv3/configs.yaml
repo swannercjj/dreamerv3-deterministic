@@ -24,9 +24,9 @@ defaults:
 
   run:
     script: train
-    steps: 1e9
+    steps: 1e10
     expl_until: 0
-    log_every: 200 # steps
+    log_every: 100 # steps
     save_every: 900 # seconds
     eval_every: 1e6
     eval_initial: True
