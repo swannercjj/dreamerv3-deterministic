@@ -80,7 +80,7 @@ class Agent(nj.Module):
     state, wm_outs, mets = self.wm.train(data, state)
     metrics.update(mets)
     context = {**data, **wm_outs['post']}
-    start = tree_map(lambda x: x.reshape([-1] + list(x.shape[2:])), context)
+    start = tree_map(lambda x: x.reshape([-1] + list(x.shape[2:])), context) # first two dimensions, (t,batch) ?
     _, mets = self.task_behavior.train(self.wm.imagine, start, context)
     metrics.update(mets)
     if self.config.expl_behavior != 'None':

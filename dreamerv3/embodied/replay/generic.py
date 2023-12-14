@@ -84,7 +84,7 @@ class Generic:
       self.metrics['inserts'] += 1
       self.metrics['insert_wait_dur'] += dur
       self.metrics['insert_wait_count'] += int(dur > 0)
-    self.table[key] = seq
+    self.table[key] = seq   # MAGIC
     self.remover[key] = seq
     self.sampler[key] = seq
     while self.capacity and len(self) > self.capacity:

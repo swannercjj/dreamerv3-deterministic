@@ -1,0 +1,16 @@
+cloudpickle
+crafter
+gym==0.26.2
+gymnasium>=0.26.2
+# Note that jax needs to be installed separately with the GPU installation
+# instructions in the Jax README, BEFORE installing the other reqs.
+jax
+jaxlib
+numpy
+optax
+rich
+ruamel.yaml
+tensorflow
+tensorflow_estimator
+tensorflow_io_gcs_filesystem
+tensorflow-probability
