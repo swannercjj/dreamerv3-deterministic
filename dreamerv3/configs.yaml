@@ -11,7 +11,7 @@ defaults:
   filter: '.*'
 
   jax:
-    platform: cpu
+    platform: gpu
     jit: True
     precision: float16
     prealloc: True
