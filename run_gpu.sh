@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=pendulum_normal
-#SBATCH --output=out/pendulum_normal_%A_%a.out
-#SBATCH --error=err/pendulum_normal_%A_%a.err
+#SBATCH --job-name=pendulum_uniform_logits_numpy
+#SBATCH --output=out/pendulum_uniform_logits_numpy_%A_%a.out
+#SBATCH --error=err/pendulum_uniform_logits_numpy_%A_%a.err
 #SBATCH --array=0-10
-#SBATCH --time=35:59:59
+#SBATCH --time=15:59:59
 #SBATCH --mem=20G
 #SBATCH --cpus-per-task=8
 #SBATCH --gres=gpu:1
@@ -14,7 +14,7 @@
 
 # SETUP
 module load StdEnv/2020
-export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASKan
 module load python/3.9
 virtualenv --no-download $SLURM_TMPDIR/env
 source $SLURM_TMPDIR/env/bin/activate

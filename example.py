@@ -49,7 +49,7 @@ def main():
   env = embodied.BatchEnv([env], parallel=False)
 
   agent = dreamerv3.Agent(env.obs_space, env.act_space, step, config)
-  replay = embodied.replay.Uniform(
+  replay = embodied.replay.ParameterizedFifo(
       config.batch_length, config.replay_size, logdir / 'replay')
   args = embodied.Config(
       **config.run, logdir=config.logdir,

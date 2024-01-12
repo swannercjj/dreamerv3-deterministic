@@ -108,6 +108,6 @@ def testBufferEvenBiased():
 
 
 if __name__ == '__main__':
-  # testBufferLogitSetting()
-  # testBufferUniformLogits()
+  testBufferLogitSetting()
+  testBufferUniformLogits()
   testBufferEvenBiased()

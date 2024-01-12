@@ -26,7 +26,37 @@ class Uniform(generic.Generic):
     )
 
 
-class ParametrizedReservoir(generic.Generic):
+class ParameterizedFifo(generic.Generic):
+  """A parametrized replay buffer that uses reservoir sampling (algorithm R) to remove items.
+  """
+  def __init__(
+      self, length, capacity=None, directory=None, online=False, chunks=1024,
+      min_size=1, samples_per_insert=None, tolerance=1e4, seed=0):
+    if samples_per_insert:
+      limiter = limiters.SamplesPerInsert(
+          samples_per_insert, tolerance, min_size)
+    else:
+      limiter = limiters.MinSize(min_size)
+    assert not capacity or min_size <= capacity
+    super().__init__(
+        length=length,
+        capacity=capacity,
+        remover=selectors.Fifo(),
+        sampler=selectors.Parameterized(capacity, default_logit_value=0.0, seed=seed),
+        limiter=limiter,
+        directory=directory,
+        online=online,
+        chunks=chunks,
+    )
+  @property
+  def logits(self):
+    return self.sampler.logits
+  @logits.setter
+  def logits(self, value):
+    self.sampler.logits = value
+
+
+class ParameterizedReservoir(generic.Generic):
   """A parametrized replay buffer that uses reservoir sampling (algorithm R) to remove items.
   """
   def __init__(
