@@ -56,6 +56,7 @@ def main():
       batch_steps=config.batch_size * config.batch_length) # type: ignore
   embodied.run.train(agent, env, replay, logger, args)
   # embodied.run.eval_only(agent, env, logger, args)
+  print('replay num calls:', replay.sampler.num_calls)
 
 
 if __name__ == '__main__':

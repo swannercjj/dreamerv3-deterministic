@@ -222,8 +222,8 @@ class Parameterized:
 
   def __call__(self):
     # https://stackoverflow.com/questions/58339083/how-to-sample-from-a-log-probability-distribution
-    gumbels = self.rng.gumbel(size=len(self.logits))
-    idx = np.argmax(self.logits + gumbels)
+    e = np.exp(self.logits)
+    idx = self.rng.choice(len(self.logits), p=e/np.sum(e))
     return self.keys[idx]
 
   def __setitem__(self, key, steps):

@@ -1,0 +1,24 @@
+================================
+UNIFORM JAX:
+Timer:                   frac      min      avg      max    count    total
+replay._sample         0.5200   0.0000   0.0000   0.0001 9000.0000   0.0515
+replay._add            0.0973   0.0000   0.0000   0.0001 900.0000   0.0096
+replay._delete         0.0356   0.0000   0.0000   0.0000 900.0000   0.0035
+================================
+PARAMETERIZED JAX:
+Timer:                   frac      min      avg      max    count    total
+replay._sample         0.9212   0.0015   0.0594   0.6837 9000.0000 534.7652
+replay._delete         0.0785   0.0000   0.0506   1.0566 900.0000  45.5755
+replay._add            0.0001   0.0000   0.0000   0.0001 900.0000   0.0294
+================================
+NUMPY ENTIRELY:
+Timer:                   frac      min      avg      max    count    total
+replay._sample         0.6780   0.0000   0.0000   0.0002 9000.0000   0.1432
+replay._delete         0.0801   0.0000   0.0000   0.0001 900.0000   0.0169
+replay._add            0.0649   0.0000   0.0000   0.0001 900.0000   0.0137
+================================
+LIST BACKEND:
+Timer:                   frac      min      avg      max    count    total
+replay._sample         0.8310   0.0000   0.0000   0.0001 9000.0000   0.3949
+replay._delete         0.0613   0.0000   0.0000   0.0001 900.0000   0.0291
+replay._add            0.0241   0.0000   0.0000   0.0000 900.0000   0.0115

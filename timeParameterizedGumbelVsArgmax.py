@@ -6,77 +6,9 @@ import numpy as np
 import jax.numpy as jnp
 
 
-class TestParameterizedReplay:
-  def __init__(self, length:int, seed=0):
-    self.length = length
-    self.remover = selectors.Fifo()
-    self.sampler = selectors.Parameterized(self.length, seed=seed)
-    self.table = {}
-  def __len__(self) -> int:
-    return len(self.table)
-  def _remove(self, key):
-    del self.table[key]
-    del self.sampler[key]
-    del self.remover[key]
-  def _add(self, item):
-    key = embodied.uuid()
-    self.table[key] = item
-    self.sampler[key] = item
-    self.remover[key] = item
-  def _delete(self):
-    while self.length > 0 and len(self) > self.length:
-      key_to_remove = self.remover()
-      self._remove(key_to_remove)
-  def add(self, item):
-    self._add(item)
-    self._delete()
-  def _sample(self):
-    key = self.sampler()
-    return self.table[key]
-  def dataset(self):
-    while True:
-      yield self._sample()
-  @property
-  def logits(self):
-    return self.sampler.logits
-  @logits.setter
-  def logits(self, value):
-    self.sampler.logits = value
-
-
-class TestUniformReplay:
-  def __init__(self, length:int, seed=0):
-    self.length = length
-    self.remover = selectors.Fifo()
-    self.sampler = selectors.Uniform(seed=seed)
-    self.table = {}
-  def __len__(self) -> int:
-    return len(self.table)
-  def _remove(self, key):
-    del self.table[key]
-    del self.sampler[key]
-    del self.remover[key]
-  def _add(self, item):
-    key = embodied.uuid()
-    self.table[key] = item
-    self.sampler[key] = item
-    self.remover[key] = item
-  def _delete(self):
-    while self.length > 0 and len(self) > self.length:
-      key_to_remove = self.remover()
-      self._remove(key_to_remove)
-  def add(self, item):
-    self._add(item)
-    self._delete()
-  def _sample(self):
-    key = self.sampler()
-    return self.table[key]
-  def dataset(self):
-    while True:
-      yield self._sample()
-
-
-class ParameterizedWithUniformSampling:
+class Parameterized:
+  """A selector that contains a set of parameters(logits) used in item selection.
+  """
   def __init__(self, length:int, default_logit_value:float=0, seed=0):
     self.length = length
     self.keys = []
@@ -85,10 +17,17 @@ class ParameterizedWithUniformSampling:
     self.logits = np.array([], dtype=np.single)
     self.rng = np.random.default_rng(seed)
 
+  def makeGumbels(self):
+    return self.rng.gumbel(size=len(self.logits))
+
+  def takeArgmax(self, gumbels):
+    return np.argmax(self.logits + gumbels)
+
   def __call__(self):
-    # UNIFORM SAMPLING HERE
-    index = self.rng.integers(0, len(self.keys)).item()
-    return self.keys[index]
+    # https://stackoverflow.com/questions/58339083/how-to-sample-from-a-log-probability-distribution
+    gumbels = self.makeGumbels()
+    idx = self.takeArgmax(gumbels)
+    return self.keys[idx]
 
   def __setitem__(self, key, steps):
     # add something to the back of the array of keys
@@ -123,11 +62,11 @@ class ParameterizedWithUniformSampling:
       self.logits = self.logits[:-1]
 
 
-class TestParameterizedWithUniformSamplingReplay:
+class TestParameterizedReplay:
   def __init__(self, length:int, seed=0):
     self.length = length
     self.remover = selectors.Fifo()
-    self.sampler = ParameterizedWithUniformSampling(self.length, seed=seed)
+    self.sampler = Parameterized(self.length, seed=seed)
     self.table = {}
   def __len__(self) -> int:
     return len(self.table)
@@ -153,12 +92,17 @@ class TestParameterizedWithUniformSamplingReplay:
   def dataset(self):
     while True:
       yield self._sample()
-
+  @property
+  def logits(self):
+    return self.sampler.logits
+  @logits.setter
+  def logits(self, value):
+    self.sampler.logits = value
 
 
 def timeit(replay, timer, experience_len, n_experience, n_samples_per_step, n_samples_after):
   experience = [str(i) for i in range(experience_len)] * n_experience
-  timer.wrap('replay', replay, ['_add', '_sample', '_delete'])
+  timer.wrap('replay.sampler', replay.sampler, ['makeGumbels', 'takeArgmax'])
   for i,exp in enumerate(experience):
     replay.add(exp)
     for _ in range(n_samples_per_step):
@@ -177,15 +121,8 @@ if __name__ == '__main__':
   NUM_TIMES_EXP = 1
   N_SAMPLES_PER_STEP = 1
   N_SAMPLES_AFTER = 0
-  uniformTimer = timeit(TestUniformReplay(CAPACITY, seed=SEED), Timer(), EXP_LEN, NUM_TIMES_EXP, N_SAMPLES_PER_STEP, N_SAMPLES_AFTER)
-  print('DONE TRAINING UNIFORM\n')
   parameterizedTimer = timeit(TestParameterizedReplay(CAPACITY, seed=SEED), Timer(), EXP_LEN, NUM_TIMES_EXP, N_SAMPLES_PER_STEP, N_SAMPLES_AFTER)
-  print('DONE TRAINING PARAMETERIZED\n')
-  parameterizedWithUniform = timeit(TestParameterizedWithUniformSamplingReplay(CAPACITY, seed=SEED), Timer(), EXP_LEN, NUM_TIMES_EXP, N_SAMPLES_PER_STEP, N_SAMPLES_AFTER)
-  print('DONE TRAINING PARAMETERIZED WITH UNIFORM SAMPLING\n')
+  print('DONE TRAINING\n')
 
-  uniformTimer.stats(log=True)
   print('================================')
   parameterizedTimer.stats(log=True)
-  print('================================')
-  parameterizedWithUniform.stats(log=True)
