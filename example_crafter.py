@@ -9,7 +9,7 @@ def main():
 
   # See configs.yaml for all options.
   config = embodied.Config(dreamerv3.configs['defaults'])
-  config = config.update(dreamerv3.configs['xlarge'])
+  config = config.update(dreamerv3.configs['medium'])
   # config = config.update({
   #     'logdir': '~/logdir/run1',
   #     'run.train_ratio': 64,
@@ -40,22 +40,18 @@ def main():
   from pathlib import Path
   config.save(str(Path(logdir) / 'configs.yaml'))
 
-  import crafter
+  # import crafter
   from gymnasium.wrappers.compatibility import EnvCompatibility
   from gym.wrappers.compatibility import EnvCompatibility
-  from dreamerv3.embodied.envs import from_gym, from_gymnasium
-#   env = "Pendulum-v1"  # Replace this with your Gym env.
-# #   env = EnvCompatibility(env, render_mode='rgb_array') # Apply EnvCompatibility wrapper because crafter is still at gym==0.19.0 API
-#   env = from_gym.FromGym(env, obs_key='vector', seed=0)  # Or obs_key='vector'.
-  from dreamerv3.embodied.envs import simple_envs
-  env = simple_envs.make('TwoRoomsFiftyFifty', seed=config.seed, goal_duration_episodes=600)
-  # env = from_gymnasium.FromGymnasium('Taxi-v3', obs_key='vector')
+  
+  from dreamerv3.embodied.envs import crafter
 
+  env = crafter.Crafter('reward', seed=config.seed, outdir=logdir / 'crafter')
   env = dreamerv3.wrap_env(env, config)
   env = embodied.BatchEnv([env], parallel=False)
 
   agent = dreamerv3.Agent(env.obs_space, env.act_space, step, config)
-  replay = embodied.replay.ParameterizedFifo(
+  replay = embodied.replay.Uniform(
       config.batch_length, config.replay_size, logdir / 'replay')
   args = embodied.Config(
       **config.run, logdir=config.logdir,

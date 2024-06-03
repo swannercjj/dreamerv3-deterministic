@@ -49,11 +49,11 @@ class ParameterizedFifo(generic.Generic):
         chunks=chunks,
     )
   @property
-  def logits(self):
-    return self.sampler.logits
-  @logits.setter
-  def logits(self, value):
-    self.sampler.logits = value
+  def probs(self):
+    return self.sampler.probs
+  @probs.setter
+  def probs(self, value):
+    self.sampler.probs = value
 
 
 class ParameterizedReservoir(generic.Generic):

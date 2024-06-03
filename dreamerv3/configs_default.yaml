@@ -5,7 +5,7 @@ defaults:
   task: Pendulum-v1
   logdir: ./logs
   replay: uniform
-  replay_size: 1e6
+  replay_size: 1e4
   replay_online: False
   eval_dir: ''
   filter: '.*'
@@ -24,7 +24,7 @@ defaults:
 
   run:
     script: train
-    steps: 1000000
+    steps: 500000
     expl_until: 0
     log_every: 1e5 # steps
     save_every: 900 # seconds
@@ -32,7 +32,7 @@ defaults:
     eval_initial: True
     eval_eps: 1
     eval_samples: 1
-    train_ratio: 512.0
+    train_ratio: 32.0
     train_fill: 0
     eval_fill: 0
     log_zeros: False

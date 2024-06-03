@@ -209,21 +209,68 @@ class Uniform:
 #       self._logit_list.pop()
 
 
+# class Parameterized:
+#   """A selector that contains a set of parameters(logits) used in item selection.
+#   """
+#   def __init__(self, length:int, default_logit_value:float=0, seed=0):
+#     self.length = length
+#     self.keys = []
+#     self.indices = {}
+#     self.default_logit_value = default_logit_value
+#     self.logits = np.array([], dtype=np.single)
+#     self.rng = np.random.default_rng(seed)
+
+  # def __call__(self):
+  #   # https://stackoverflow.com/questions/58339083/how-to-sample-from-a-log-probability-distribution
+  #   e = np.exp(self.logits)
+  #   idx = self.rng.choice(len(self.logits), p=e/np.sum(e))
+  #   return self.keys[idx]
+
+#   def __setitem__(self, key, steps):
+#     # add something to the back of the array of keys
+#     self.indices[key] = len(self.keys)
+#     self.keys.append(key)
+#     if len(self.keys) <= self.length:
+#       # we want the first {length} items added to have the default logit value
+#       self.logits = np.append(self.logits, self.default_logit_value)
+
+#   def __delitem__(self, key):
+#     has_waiting:bool = len(self.keys) > self.length
+#     index = self.indices.pop(key)
+#     last = self.keys.pop()
+#     if index != len(self.keys): # If the element is something in the middle of the buffer
+#       # Move the last element into the spot we are removing
+#       self.keys[index] = last
+#       self.indices[last] = index # update the index
+#       if has_waiting:
+#         # The element we're moving does not have a logit yet
+#         # We need to calculate a value for the new logit
+#         other_logits = np.concatenate((self.logits[:index], self.logits[index+1:]))
+#         # using np.log(np.add.reduce(np.exp(logits))) is faster than np.logaddexp.reduce(logits)
+#         new_logit = np.log(np.add.reduce(np.exp(other_logits))) - np.log(len(other_logits))
+#         self.logits[index] = new_logit
+#       else:
+#         # The element we're moving already has a logit assigned; move it
+#         self.logits[index] = self.logits[-1]
+#         self.logits = self.logits[:-1]
+#     elif not has_waiting: # The item we're deleting is the last one
+#       # And there's no element waiting to have a logit assigned
+#       # So the thing we're deleting has a logit already, so we delete it
+#       self.logits = self.logits[:-1]
+
 class Parameterized:
   """A selector that contains a set of parameters(logits) used in item selection.
   """
-  def __init__(self, length:int, default_logit_value:float=0, seed=0):
+  def __init__(self, length:int, seed=0):
     self.length = length
     self.keys = []
     self.indices = {}
-    self.default_logit_value = default_logit_value
-    self.logits = np.array([], dtype=np.single)
+    self.probs = np.array([], dtype=np.single)
     self.rng = np.random.default_rng(seed)
 
   def __call__(self):
     # https://stackoverflow.com/questions/58339083/how-to-sample-from-a-log-probability-distribution
-    e = np.exp(self.logits)
-    idx = self.rng.choice(len(self.logits), p=e/np.sum(e))
+    idx = self.rng.choice(len(self.probs), p=self.probs) # assumes probs are normalized
     return self.keys[idx]
 
   def __setitem__(self, key, steps):
@@ -231,10 +278,13 @@ class Parameterized:
     self.indices[key] = len(self.keys)
     self.keys.append(key)
     if len(self.keys) <= self.length:
-      # we want the first {length} items added to have the default logit value
-      self.logits = np.append(self.logits, self.default_logit_value)
+      # we want the first {length} items added to have a default probability value
+      new_prob = 1 if len(self.probs) == 0 else 1 / len(self.probs)
+      self.probs = np.append(self.probs, new_prob)
+      self.probs = self.probs / np.sum(self.probs) # normalize
 
   def __delitem__(self, key):
+    # TODO -- does this ever get called before the buffer is full? Does that matteer?
     has_waiting:bool = len(self.keys) > self.length
     index = self.indices.pop(key)
     last = self.keys.pop()
@@ -243,17 +293,17 @@ class Parameterized:
       self.keys[index] = last
       self.indices[last] = index # update the index
       if has_waiting:
-        # The element we're moving does not have a logit yet
-        # We need to calculate a value for the new logit
-        other_logits = np.concatenate((self.logits[:index], self.logits[index+1:]))
-        # using np.log(np.add.reduce(np.exp(logits))) is faster than np.logaddexp.reduce(logits)
-        new_logit = np.log(np.add.reduce(np.exp(other_logits))) - np.log(len(other_logits))
-        self.logits[index] = new_logit
+        # The element we're moving does not have a probability yet
+        # We need to calculate a value for the new probability
+        self.probs[index] = 1 / self.length
+        self.probs = self.probs / np.sum(self.probs) # normalize
       else:
-        # The element we're moving already has a logit assigned; move it
-        self.logits[index] = self.logits[-1]
-        self.logits = self.logits[:-1]
+        # The element we're moving already has a probability assigned; move it
+        self.probs[index] = self.probs[-1]
+        self.probs = self.probs[:-1]
+        self.probs = self.probs / np.sum(self.probs) # normalize
     elif not has_waiting: # The item we're deleting is the last one
-      # And there's no element waiting to have a logit assigned
-      # So the thing we're deleting has a logit already, so we delete it
-      self.logits = self.logits[:-1]
+      # And there's no element waiting to have a probability assigned
+      # So the thing we're deleting has a probability already, so we delete it
+      self.probs = self.probs[:-1]
+      self.probs = self.probs / np.sum(self.probs) # normalize

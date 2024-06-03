@@ -5,7 +5,7 @@ defaults:
   task: Pendulum-v1
   logdir: ./logs
   replay: uniform
-  replay_size: 1e6
+  replay_size: 1e4
   replay_online: False
   eval_dir: ''
   filter: '.*'
@@ -24,7 +24,7 @@ defaults:
 
   run:
     script: train
-    steps: 1000000
+    steps: 500000
     expl_until: 0
     log_every: 1e5 # steps
     save_every: 900 # seconds
@@ -32,7 +32,7 @@ defaults:
     eval_initial: True
     eval_eps: 1
     eval_samples: 1
-    train_ratio: 512.0
+    train_ratio: 64.0
     train_fill: 0
     eval_fill: 0
     log_zeros: False
@@ -64,7 +64,7 @@ defaults:
 
   # World Model
   grad_heads: [decoder, reward, cont]
-  rssm: {deter: 4096, units: 1024, stoch: 32, classes: 32, act: silu, norm: layer, initial: learned, unimix: 0.01, unroll: False, action_clip: 1.0, winit: normal, fan: avg}
+  rssm: {deter: 4096, units: 1024, stoch: 8, classes: 8, act: silu, norm: layer, initial: learned, unimix: 0.01, unroll: False, action_clip: 1.0, winit: normal, fan: avg}
   encoder: {mlp_keys: '.*', cnn_keys: '.*', act: silu, norm: layer, mlp_layers: 5, mlp_units: 1024, cnn: resnet, cnn_depth: 96, cnn_blocks: 0, resize: stride, winit: normal, fan: avg, symlog_inputs: True, minres: 4}
   decoder: {mlp_keys: '.*', cnn_keys: '.*', act: silu, norm: layer, mlp_layers: 5, mlp_units: 1024, cnn: resnet, cnn_depth: 96, cnn_blocks: 0, image_dist: mse, vector_dist: symlog_mse, inputs: [deter, stoch], resize: stride, winit: normal, fan: avg, outscale: 1.0, minres: 4, cnn_sigmoid: False}
   reward_head: {layers: 5, units: 1024, act: silu, norm: layer, dist: symlog_disc, outscale: 0.0, outnorm: False, inputs: [deter, stoch], winit: normal, fan: avg, bins: 255}

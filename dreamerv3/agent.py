@@ -77,17 +77,20 @@ class Agent(nj.Module):
     self.config.jax.jit and print('Tracing train function.')
     metrics = {}
     data = self.preprocess(data)
-    state, wm_outs, mets = self.wm.train(data, state)
+    state, wm_outs, mets = self.wm.train(data, state) # I assume this is Dynamics Learning
     metrics.update(mets)
     context = {**data, **wm_outs['post']}
     start = tree_map(lambda x: x.reshape([-1] + list(x.shape[2:])), context) # first two dimensions, (t,batch) ?
-    _, mets = self.task_behavior.train(self.wm.imagine, start, context)
+    _, mets = self.task_behavior.train(self.wm.imagine, start, context) # Behaviour Learning?
     metrics.update(mets)
     if self.config.expl_behavior != 'None':
       _, mets = self.expl_behavior.train(self.wm.imagine, start, context)
       metrics.update({'expl_' + key: value for key, value in mets.items()})
     outs = {}
     return outs, state, metrics
+  
+  def mgsc_train(self, replay, data, state):
+    pass
 
   def report(self, data):
     self.config.jax.jit and print('Tracing report function.')
@@ -280,7 +283,7 @@ class ImagActorCritic(nj.Module):
     advs = []
     total = sum(self.scales[k] for k in self.critics)
     for key, critic in self.critics.items():
-      rew, ret, base = critic.score(traj, self.actor)
+      rew, ret, base = critic.score(traj, self.actor) # This is the VFunction. v_\psi or V_\lambda ?
       offset, invscale = self.retnorms[key](ret)
       normed_ret = (ret - offset) / invscale
       normed_base = (base - offset) / invscale
@@ -357,6 +360,8 @@ class VFunction(nj.Module):
     return loss, metrics
 
   def score(self, traj, actor=None):
+    # print('TRAJECTORY FORMAT:', traj, type(traj))
+    # print('TRAJ ACTION FORMAT:', traj['action'], type(traj['action']))
     rew = self.rewfn(traj)
     assert len(rew) == len(traj['action']) - 1, (
         'should provide rewards for all but last action')

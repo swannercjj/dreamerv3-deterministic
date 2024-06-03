@@ -1,12 +1,14 @@
 #!/bin/bash
-#SBATCH --job-name=time_numpy_vs_random_probs
-#SBATCH --output=out/time_numpy_vs_random_probs_%A_%a.out
-#SBATCH --error=err/time_numpy_vs_random_probs_%A_%a.err
-#SBATCH --array=0-0
-#SBATCH --time=3:59:59
-#SBATCH --mem=20G
+#SBATCH --job-name=crafter
+#SBATCH --output=out/crafter_%A_%a.out
+#SBATCH --error=err/crafter_%A_%a.err
+#SBATCH --array=0-9
+#SBATCH --time=69:59:59
+#SBATCH --mem=25G
+#SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
-#SBATCH --gres=gpu:1
+#SBATCH --gpus-per-node=v100:1
+#SBATCH --ntasks-per-node=1
 #SBATCH --account=rrg-mbowling-ad
 #SBATCH --mail-user=kapeluck@ualberta.ca
 #SBATCH --mail-type=BEGIN
@@ -23,4 +25,10 @@ pip install --no-index -r requirements_cc.txt
 module load gcc/9.3.0 cuda/11.8 cudnn/8.6
 export LD_LIBRARY_PATH="$CUDA_HOME/lib64;$EBROOTCUDNN/lib"
 
-python timeNumpyProbsVsPython.py
+mkdir -p ./logs/$SLURM_JOB_NAME
+
+python example_crafter.py \
+    --logdir="./logs/${SLURM_JOB_NAME}/${SLURM_ARRAY_TASK_ID}" \
+    --seed="${SLURM_ARRAY_TASK_ID}"
+
+touch ./logs/$SLURM_JOB_NAME/$SLURM_ARRAY_TASK_ID/complete

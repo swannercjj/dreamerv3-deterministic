@@ -1,9 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=pendulum_parameterized_fifo_call_count
-#SBATCH --output=out/pendulum_parameterized_fifo_call_count_%A_%a.out
-#SBATCH --error=err/pendulum_parameterized_fifo_call_count_%A_%a.err
+#SBATCH --job-name=pendulum_parameterized_fifo_uniform_probs
+#SBATCH --output=out/pendulum_parameterized_fifo_uniform_probs_%A_%a.out
+#SBATCH --error=err/pendulum_parameterized_fifo_uniform_probs_%A_%a.err
 #SBATCH --array=0-10
-#SBATCH --time=13:59:59
+#SBATCH --time=15:59:59
 #SBATCH --mem=20G
 #SBATCH --cpus-per-task=8
 #SBATCH --gres=gpu:1

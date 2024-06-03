@@ -421,6 +421,8 @@ class MLP(nj.Module):
 
   def __call__(self, inputs):
     feat = self._inputs(inputs)
+    # print('LUKE HERE INPUTS', inputs)
+    # print('LUKE HERE FEATS ', feat)
     if self._symlog_inputs:
       feat = jaxutils.symlog(feat)
     x = jaxutils.cast_to_compute(feat)

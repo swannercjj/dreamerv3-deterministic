@@ -32,7 +32,7 @@ class Config(dict):
     elif filename.suffix in ('.yml', '.yaml'):
       import ruamel.yaml as yaml
       with io.StringIO() as stream:
-        yaml.safe_dump(dict(self), stream)
+        yaml.YAML(typ='safe',pure=True).dump(dict(self), stream)
         filename.write(stream.getvalue())
     else:
       raise NotImplementedError(filename.suffix)
