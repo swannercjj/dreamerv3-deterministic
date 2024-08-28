@@ -411,7 +411,7 @@ class MLP(nj.Module):
       shape = (shape,)
     self._shape = shape
     self._layers = layers
-    self._units = units
+    self._units = units # are these the weights?
     self._inputs = Input(inputs, dims=dims)
     self._symlog_inputs = symlog_inputs
     distkeys = (
@@ -425,7 +425,7 @@ class MLP(nj.Module):
       feat = jaxutils.symlog(feat)
     x = jaxutils.cast_to_compute(feat)
     x = x.reshape([-1, x.shape[-1]])
-    for i in range(self._layers):
+    for i in range(self._layers): # feed-forward
       x = self.get(f'h{i}', Linear, self._units, **self._dense)(x)
     x = x.reshape(feat.shape[:-1] + (x.shape[-1],))
     if self._shape is None:
@@ -570,13 +570,13 @@ class Linear(nj.Module):
     self._bias = bias and norm == 'none'
     self._outscale = outscale
     self._outnorm = outnorm
-    self._winit = winit
+    self._winit = winit # way to initialize weights?
     self._fan = fan
 
   def __call__(self, x):
     shape = (x.shape[-1], np.prod(self._units))
     kernel = self.get('kernel', Initializer(
-        self._winit, self._outscale, fan=self._fan), shape)
+        self._winit, self._outscale, fan=self._fan), shape) # these are the weights for this layer?
     kernel = jaxutils.cast_to_compute(kernel)
     x = x @ kernel
     if self._bias:

@@ -11,13 +11,14 @@ from . import jaxutils
 class Greedy(nj.Module):
 
   def __init__(self, wm, act_space, config):
-    rewfn = lambda s: wm.heads['reward'](s).mean()[1:]
+    rewfn = lambda s: wm.heads['reward'](s).mean()[1:] # v_psi(s)
     if config.critic_type == 'vfunction':
       critics = {'extr': agent.VFunction(rewfn, config, name='critic')}
     else:
       raise NotImplementedError(config.critic_type)
     self.ac = agent.ImagActorCritic(
         critics, {'extr': 1.0}, act_space, config, name='ac')
+#       critics, scales       , act_space, config, nj.Module.name
 
   def initial(self, batch_size):
     return self.ac.initial(batch_size)

@@ -21,7 +21,7 @@ def train(agent, env, replay, logger, args):
   print('Action space:', embodied.format(env.act_space), sep='\n')
 
   timer = embodied.Timer()
-  timer.wrap('agent', agent, ['policy', 'train', 'report', 'save'])
+  timer.wrap('agent', agent, ['policy', 'train', 'report', 'save', 'mgsc_train'])
   timer.wrap('env', env, ['step'])
   timer.wrap('replay', replay, ['add', 'save'])
   timer.wrap('logger', logger, ['write'])
@@ -66,6 +66,8 @@ def train(agent, env, replay, logger, args):
   logger.add(metrics.result())
   logger.write()
 
+  replay_B = embodied.replay.ReservoirReplay(capacity=config.batch_steps, seed=config.seed)
+
   dataset = agent.dataset(replay.dataset)
   state = [None]  # To be writable from train step function below.
   batch = [None]
@@ -73,7 +75,7 @@ def train(agent, env, replay, logger, args):
     for _ in range(should_train(step)):
       with timer.scope('dataset'):
         batch[0] = next(dataset)
-      outs, state[0], mets = agent.train(batch[0], state[0])
+      outs, state[0], mets = agent.train(batch[0], state[0], replay)
       metrics.add(mets, prefix='train')
       if 'priority' in outs:
         replay.prioritize(outs['key'], outs['priority'])
@@ -89,6 +91,9 @@ def train(agent, env, replay, logger, args):
       logger.add(replay.stats, prefix='replay')
       logger.add(timer.stats(), prefix='timer')
       logger.write(fps=True)
+    if args.do_mgsc:
+      # META LEARNING TRAINING
+      agent.mgsc_train(replay, None, state[0])
   driver.on_step(train_step)
 
   checkpoint = embodied.Checkpoint(logdir / 'checkpoint.ckpt')

@@ -245,7 +245,7 @@ class Moments(nj.Module):
       self.low = nj.Variable(jnp.zeros, (), jnp.float32, name='low')
       self.high = nj.Variable(jnp.zeros, (), jnp.float32, name='high')
     elif self.impl == 'perc_ema':
-      self.low = nj.Variable(jnp.zeros, (), jnp.float32, name='low')
+      self.low = nj.Variable(jnp.zeros, (), jnp.float32, name='low')   # It is perc_ema in default config
       self.high = nj.Variable(jnp.zeros, (), jnp.float32, name='high')
     elif self.impl == 'perc_ema_corr':
       self.step = nj.Variable(jnp.zeros, (), jnp.int32, name='step')
@@ -387,8 +387,7 @@ class Optimizer(nj.Module):
         loss *= sg(self.grad_scale.read())
       return loss, aux
     metrics = {}
-    loss, params, grads, aux = nj.grad(
-        wrapped, modules, has_aux=True)(*args, **kwargs)
+    loss, params, grads, aux = nj.grad(wrapped, modules, has_aux=True)(*args, **kwargs) # grads = the gradient
     if not self.PARAM_COUNTS[self.path]:
       count = sum([np.prod(x.shape) for x in params.values()])
       print(f'Optimizer {self.name} has {count:,} variables.')
@@ -413,6 +412,44 @@ class Optimizer(nj.Module):
     metrics['grad_steps'] = self.step.read()
     metrics = {f'{self.name}_{k}': v for k, v in metrics.items()}
     return (metrics, aux) if has_aux else metrics
+
+  def calc_parameters(self, modules, lossfn, *args, has_aux=False, **kwargs):
+    def wrapped(*args, **kwargs):
+      outs = lossfn(*args, **kwargs)
+      loss, aux = outs if has_aux else (outs, None)
+      assert loss.dtype == jnp.float32, (self.name, loss.dtype)
+      assert loss.shape == (), (self.name, loss.shape)
+      if self.scaling:
+        loss *= sg(self.grad_scale.read())
+      return loss, aux
+    metrics = {}
+    loss, params, grads, aux = nj.grad(
+        wrapped, modules, has_aux=True)(*args, **kwargs) # the gradient
+    if not self.PARAM_COUNTS[self.path]:
+      count = sum([np.prod(x.shape) for x in params.values()])
+      print(f'Optimizer {self.name} has {count:,} variables.')
+      self.PARAM_COUNTS[self.path] = count
+    if parallel():
+      grads = tree_map(lambda x: jax.lax.pmean(x, 'i'), grads)
+    if self.scaling:
+      grads = tree_map(lambda x: x / self.grad_scale.read(), grads)
+      finite = self._update_scale(grads)
+      # metrics[f'{self.name}_grad_scale'] = self.grad_scale.read()
+      # metrics[f'{self.name}_grad_overflow'] = (~finite).astype(jnp.float32)
+    optstate = self.get('state', self.opt.init, params)
+    updates, optstate = self.opt.update(grads, optstate, params)
+    # self.put('state', optstate)
+    # nj.context().update(optax.apply_updates(params, updates))
+    new_parameters = optax.apply_updates(params, updates) # addition; returns (params + updates)
+    norm = optax.global_norm(grads)
+    if self.scaling:
+      norm = jnp.where(jnp.isfinite(norm), norm, jnp.nan)
+    self.step.write(self.step.read() + jnp.isfinite(norm).astype(jnp.int32))
+    # metrics['loss'] = loss.mean()
+    # metrics['grad_norm'] = norm
+    # metrics['grad_steps'] = self.step.read()
+    # metrics = {f'{self.name}_{k}': v for k, v in metrics.items()}
+    return new_parameters
 
   def _update_scale(self, grads):
     finite = jnp.array([

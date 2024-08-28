@@ -73,14 +73,29 @@ class Agent(nj.Module):
     state = ((latent, outs['action']), task_state, expl_state)
     return outs, state
 
-  def train(self, data, state):
+  def train(self, data, state, replay_B=None):
     self.config.jax.jit and print('Tracing train function.')
     metrics = {}
+    # ===== We've got to do all of this with the things we sample from the replay buffer
+    # which are the starts that are weighted from our replay buffer
+    # print('=========================\n',data, type(data), len(data), '\n=========================')
+    # {'action': Traced<ShapedArray(float32[16,64,3])>with<DynamicJaxprTrace(level=1/0)>, 'is_first': Traced<ShapedArray(bool[16,64])>with<DynamicJaxprTrace(level=1/0)>, 'is_last': Traced<ShapedArray(bool[16,64])>with<DynamicJaxprTrace(level=1/0)>, 'is_terminal': Traced<ShapedArray(bool[16,64])>with<DynamicJaxprTrace(level=1/0)>, 'reset': Traced<ShapedArray(bool[16,64])>with<DynamicJaxprTrace(level=1/0)>, 'reward': Traced<ShapedArray(float32[16,64])>with<DynamicJaxprTrace(level=1/0)>, 'vector': Traced<ShapedArray(float32[16,64,6])>with<DynamicJaxprTrace(level=1/0)>} <class 'dict'> 7 
     data = self.preprocess(data)
     state, wm_outs, mets = self.wm.train(data, state)
     metrics.update(mets)
     context = {**data, **wm_outs['post']}
     start = tree_map(lambda x: x.reshape([-1] + list(x.shape[2:])), context)
+    print('=========================\n',start, type(start), '\n=========================')
+    # {'action': Traced<ShapedArray(float32[1024,1])>with<DynamicJaxprTrace(level=1/0)>, 'cont': Traced<ShapedArray(float32[1024])>with<DynamicJaxprTrace(level=1/0)>, 'deter': Traced<ShapedArray(float16[1024,1024])>with<DynamicJaxprTrace(level=1/0)>, 'is_first': Traced<ShapedArray(float32[1024])>with<DynamicJaxprTrace(level=1/0)>, 'is_last': Traced<ShapedArray(float32[1024])>with<DynamicJaxprTrace(level=1/0)>, 'is_terminal': Traced<ShapedArray(float32[1024])>with<DynamicJaxprTrace(level=1/0)>, 'logit': Traced<ShapedArray(float16[1024,32,32])>with<DynamicJaxprTrace(level=1/0)>, 'reset': Traced<ShapedArray(float32[1024])>with<DynamicJaxprTrace(level=1/0)>, 'reward': Traced<ShapedArray(float32[1024])>with<DynamicJaxprTrace(level=1/0)>, 'stoch': Traced<ShapedArray(float16[1024,32,32])>with<DynamicJaxprTrace(level=1/0)>, 'vector': Traced<ShapedArray(float32[1024,3])>with<DynamicJaxprTrace(level=1/0)>} <class 'dict'>
+    # =====
+    # Luke TODO -- Gotta be a faster way to run this same logic
+    if config.do_mgsc:
+      assert replay_B is not None, f"replay_B must not be none if MGSC is set to True"
+      unbatched_states = [{k:start[k][i] for k in start} for i in range(config.batch_steps)]
+      for s in unbatched_states:
+        replay_B.add(s)
+      start = replay_B.sample(config.batch_steps)
+    # =====
     _, mets = self.task_behavior.train(self.wm.imagine, start, context)
     metrics.update(mets)
     if self.config.expl_behavior != 'None':
@@ -88,6 +103,13 @@ class Agent(nj.Module):
       metrics.update({'expl_' + key: value for key, value in mets.items()})
     outs = {}
     return outs, state, metrics
+
+  def mgsc_train(self, replay_B, replay_D, data, state):
+    unique_B = replay_B.as_unique()
+    # get psi
+    # compute psi-bar without updating the weights
+    # compute psi-hat without updating the weights, but using psi-bar
+    # compute loss and update replay
 
   def report(self, data):
     self.config.jax.jit and print('Tracing report function.')
@@ -247,12 +269,12 @@ class ImagActorCritic(nj.Module):
     self.act_space = act_space
     self.config = config
     disc = act_space.discrete
-    self.grad = config.actor_grad_disc if disc else config.actor_grad_cont
+    self.grad = config.actor_grad_disc if disc else config.actor_grad_cont # reinforce if act_space.discrete else backprop
     self.actor = nets.MLP(
         name='actor', dims='deter', shape=act_space.shape, **config.actor,
         dist=config.actor_dist_disc if disc else config.actor_dist_cont)
     self.retnorms = {
-        k: jaxutils.Moments(**config.retnorm, name=f'retnorm_{k}')
+        k: jaxutils.Moments(**config.retnorm, name=f'retnorm_{k}') # What is this? Also why is ninjax and jaxutils a thing
         for k in critics}
     self.opt = jaxutils.Optimizer(name='actor_opt', **config.actor_opt)
 
@@ -265,10 +287,10 @@ class ImagActorCritic(nj.Module):
   def train(self, imagine, start, context):
     def loss(start):
       policy = lambda s: self.actor(sg(s)).sample(seed=nj.rng())
-      traj = imagine(policy, start, self.config.imag_horizon)
-      loss, metrics = self.loss(traj)
+      traj = imagine(policy, start, self.config.imag_horizon) # imagine trajectories
+      loss, metrics = self.loss(traj) # something in here likely contains the loss computations and subsequent updates
       return loss, (traj, metrics)
-    mets, (traj, metrics) = self.opt(self.actor, loss, start, has_aux=True)
+    mets, (traj, metrics) = self.opt(self.actor, loss, start, has_aux=True) # actor; adam
     metrics.update(mets)
     for key, critic in self.critics.items():
       mets = critic.train(traj, self.actor)
@@ -278,10 +300,10 @@ class ImagActorCritic(nj.Module):
   def loss(self, traj):
     metrics = {}
     advs = []
-    total = sum(self.scales[k] for k in self.critics)
+    total = sum(self.scales[k] for k in self.critics) # == 1 in current implementation
     for key, critic in self.critics.items():
-      rew, ret, base = critic.score(traj, self.actor)
-      offset, invscale = self.retnorms[key](ret)
+      rew, ret, base = critic.score(traj, self.actor) # predict rewards and values, rew==v_psi, ret==V_lambda?
+      offset, invscale = self.retnorms[key](ret) # retnorms.__getitem__(key).__call__(ret) == <jaxutils.Moments>.__call__(ret)
       normed_ret = (ret - offset) / invscale
       normed_base = (base - offset) / invscale
       advs.append((normed_ret - normed_base) * self.scales[key] / total)
@@ -297,6 +319,7 @@ class ImagActorCritic(nj.Module):
     loss -= self.config.actent * ent
     loss *= sg(traj['weight'])[:-1]
     loss *= self.config.loss_scales.actor
+    # what does loss look like? Shape, type, etc.
     metrics.update(self._metrics(traj, policy, logpi, ent, adv))
     return loss.mean(), metrics
 
@@ -319,10 +342,10 @@ class ImagActorCritic(nj.Module):
 class VFunction(nj.Module):
 
   def __init__(self, rewfn, config):
-    self.rewfn = rewfn
+    self.rewfn = rewfn # v_psi(s)
     self.config = config
     self.net = nets.MLP((), name='net', dims='deter', **self.config.critic)
-    self.slow = nets.MLP((), name='slow', dims='deter', **self.config.critic)
+    self.slow = nets.MLP((), name='slow', dims='deter', **self.config.critic) # what's this?
     self.updater = jaxutils.SlowUpdater(
         self.net, self.slow,
         self.config.slow_critic_fraction,
@@ -340,7 +363,7 @@ class VFunction(nj.Module):
     metrics = {}
     traj = {k: v[:-1] for k, v in traj.items()}
     dist = self.net(traj)
-    loss = -dist.log_prob(sg(target))
+    loss = -dist.log_prob(sg(target)) # the target seems important
     if self.config.critic_slowreg == 'logprob':
       reg = -dist.log_prob(sg(self.slow(traj).mean()))
     elif self.config.critic_slowreg == 'xent':
@@ -357,7 +380,7 @@ class VFunction(nj.Module):
     return loss, metrics
 
   def score(self, traj, actor=None):
-    rew = self.rewfn(traj)
+    rew = self.rewfn(traj) # v_psi(traj)
     assert len(rew) == len(traj['action']) - 1, (
         'should provide rewards for all but last action')
     discount = 1 - 1 / self.config.horizon
@@ -367,5 +390,5 @@ class VFunction(nj.Module):
     interm = rew + disc * value[1:] * (1 - self.config.return_lambda)
     for t in reversed(range(len(disc))):
       vals.append(interm[t] + disc[t] * self.config.return_lambda * vals[-1])
-    ret = jnp.stack(list(reversed(vals))[:-1])
+    ret = jnp.stack(list(reversed(vals))[:-1]) # is this V_lambda?
     return rew, ret, value[:-1]
