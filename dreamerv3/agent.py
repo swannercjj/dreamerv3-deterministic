@@ -85,16 +85,16 @@ class Agent(nj.Module):
     metrics.update(mets)
     context = {**data, **wm_outs['post']}
     start = tree_map(lambda x: x.reshape([-1] + list(x.shape[2:])), context)
-    print('=========================\n',start, type(start), '\n=========================')
+    # print('=========================\n',start, type(start), '\n=========================')
     # {'action': Traced<ShapedArray(float32[1024,1])>with<DynamicJaxprTrace(level=1/0)>, 'cont': Traced<ShapedArray(float32[1024])>with<DynamicJaxprTrace(level=1/0)>, 'deter': Traced<ShapedArray(float16[1024,1024])>with<DynamicJaxprTrace(level=1/0)>, 'is_first': Traced<ShapedArray(float32[1024])>with<DynamicJaxprTrace(level=1/0)>, 'is_last': Traced<ShapedArray(float32[1024])>with<DynamicJaxprTrace(level=1/0)>, 'is_terminal': Traced<ShapedArray(float32[1024])>with<DynamicJaxprTrace(level=1/0)>, 'logit': Traced<ShapedArray(float16[1024,32,32])>with<DynamicJaxprTrace(level=1/0)>, 'reset': Traced<ShapedArray(float32[1024])>with<DynamicJaxprTrace(level=1/0)>, 'reward': Traced<ShapedArray(float32[1024])>with<DynamicJaxprTrace(level=1/0)>, 'stoch': Traced<ShapedArray(float16[1024,32,32])>with<DynamicJaxprTrace(level=1/0)>, 'vector': Traced<ShapedArray(float32[1024,3])>with<DynamicJaxprTrace(level=1/0)>} <class 'dict'>
     # =====
     # Luke TODO -- Gotta be a faster way to run this same logic
-    if config.do_mgsc:
-      assert replay_B is not None, f"replay_B must not be none if MGSC is set to True"
-      unbatched_states = [{k:start[k][i] for k in start} for i in range(config.batch_steps)]
-      for s in unbatched_states:
-        replay_B.add(s)
-      start = replay_B.sample(config.batch_steps)
+    # if self.config.do_mgsc:
+    #   assert replay_B is not None, f"replay_B must not be none if MGSC is set to True"
+    #   unbatched_states = [{k:start[k][i] for k in start} for i in range(self.config.batch_steps)]
+    #   for s in unbatched_states:
+    #     replay_B.add(s)
+    #   start = replay_B.sample(self.config.batch_steps)
     # =====
     _, mets = self.task_behavior.train(self.wm.imagine, start, context)
     metrics.update(mets)
@@ -278,6 +278,11 @@ class ImagActorCritic(nj.Module):
         for k in critics}
     self.opt = jaxutils.Optimizer(name='actor_opt', **config.actor_opt)
 
+  def copy(self):
+    critics = {k: v.copy() for k, v in self.critics.items()}
+    ac = ImagActorCritic(critics, self.scales, self.act_space, self.config)
+    return ac
+
   def initial(self, batch_size):
     return {}
 
@@ -345,12 +350,20 @@ class VFunction(nj.Module):
     self.rewfn = rewfn # v_psi(s)
     self.config = config
     self.net = nets.MLP((), name='net', dims='deter', **self.config.critic)
-    self.slow = nets.MLP((), name='slow', dims='deter', **self.config.critic) # what's this?
+    self.slow = nets.MLP((), name='slow', dims='deter', **self.config.critic) # what's this? maybe a target network
     self.updater = jaxutils.SlowUpdater(
         self.net, self.slow,
         self.config.slow_critic_fraction,
         self.config.slow_critic_update)
     self.opt = jaxutils.Optimizer(name='critic_opt', **self.config.critic_opt)
+
+  def copy(self):
+    vfunction = VFunction(self.rewfn, self.config)
+    vfunction.net = self.net
+    vfunction.slow = self.slow
+    vfunction.updater = self.updater
+    # vfunction.opt = self.opt
+    return vfunction
 
   def train(self, traj, actor):
     target = sg(self.score(traj)[1])

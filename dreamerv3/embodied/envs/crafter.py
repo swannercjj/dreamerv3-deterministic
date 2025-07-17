@@ -18,27 +18,28 @@ class Crafter(embodied.Env):
       )
     self._achievements = crafter.constants.achievements.copy()
     self._done = True
+    self._seed = seed
 
   @property
   def obs_space(self):
     spaces = {
-        'image': embodied.Space(np.uint8, self._env.observation_space.shape),
-        'reward': embodied.Space(np.float32),
-        'is_first': embodied.Space(bool),
-        'is_last': embodied.Space(bool),
-        'is_terminal': embodied.Space(bool),
-        'log_reward': embodied.Space(np.float32),
+        'image': embodied.Space(np.uint8, self._env.observation_space.shape, seed=self._seed),
+        'reward': embodied.Space(np.float32, seed=self._seed),
+        'is_first': embodied.Space(bool, seed=self._seed),
+        'is_last': embodied.Space(bool, seed=self._seed),
+        'is_terminal': embodied.Space(bool, seed=self._seed),
+        'log_reward': embodied.Space(np.float32, seed=self._seed),
     }
     spaces.update({
-        f'log_achievement_{k}': embodied.Space(np.int32)
+        f'log_achievement_{k}': embodied.Space(np.int32, seed=self._seed)
         for k in self._achievements})
     return spaces
 
   @property
   def act_space(self):
     return {
-        'action': embodied.Space(np.int32, (), 0, self._env.action_space.n),
-        'reset': embodied.Space(bool),
+        'action': embodied.Space(np.int32, (), 0, self._env.action_space.n, seed=self._seed),
+        'reset': embodied.Space(bool, seed=self._seed),
     }
 
   def step(self, action):

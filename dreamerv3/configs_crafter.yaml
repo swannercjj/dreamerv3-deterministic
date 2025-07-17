@@ -5,7 +5,7 @@ defaults:
   task: dummy_disc
   logdir: ./logs/
   replay: uniform
-  replay_size: 1e5
+  replay_size: 1e4
   replay_online: False
   eval_dir: ''
   filter: '.*'
@@ -24,7 +24,7 @@ defaults:
 
   run:
     script: train
-    steps: 1e6
+    steps: 1e5
     expl_until: 0
     log_every: 1e4 # steps
     save_every: 900 # seconds
@@ -61,9 +61,6 @@ defaults:
   batch_size: 16
   batch_length: 64
   data_loaders: 1 # 0 or 1, if set to 0 see note in jaxagent.py
-
-  # MGSC
-  do_mgsc: True
 
   # World Model
   grad_heads: [decoder, reward, cont]

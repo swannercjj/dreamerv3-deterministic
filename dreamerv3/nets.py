@@ -564,7 +564,7 @@ class Linear(nj.Module):
   def __init__(
       self, units, act='none', norm='none', bias=True, outscale=1.0,
       outnorm=False, winit='uniform', fan='avg'):
-    self._units = tuple(units) if hasattr(units, '__len__') else (units,)
+    self._units = tuple(units) if hasattr(units, '__len__') else (units,) # The number of hidden units / perceptrons
     self._act = get_act(act)
     self._norm = norm
     self._bias = bias and norm == 'none'
@@ -575,9 +575,15 @@ class Linear(nj.Module):
 
   def __call__(self, x):
     shape = (x.shape[-1], np.prod(self._units))
+    # print('=========================\n',self._units, type(self._units), '\n=========================')
+    # (640,) <class 'tuple'> OR (1,) <class 'tuple'> OR (1024,) <class 'tuple'>
+    # print('=========================\n',shape, type(shape), '\n=========================')
+    # (2048, 640) <class 'tuple'> 
     kernel = self.get('kernel', Initializer(
         self._winit, self._outscale, fan=self._fan), shape) # these are the weights for this layer?
     kernel = jaxutils.cast_to_compute(kernel)
+    print('=========================\n',kernel, type(kernel), '\n=========================')
+    # Traced<ShapedArray(float16[2048,640])>with<DynamicJaxprTrace(level=2/0)> <class 'jax._src.interpreters.partial_eval.DynamicJaxprTracer'>
     x = x @ kernel
     if self._bias:
       bias = self.get('bias', jnp.zeros, np.prod(self._units), np.float32)
